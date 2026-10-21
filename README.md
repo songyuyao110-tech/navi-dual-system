@@ -3,6 +3,23 @@
 Current approved path: all-domain JEV B disclosure → DeepSeek ReAct → shared
 mock runtime. The reference navigation repository stays read-only.
 
+> **Branch layout.** `main` (this branch) is an early baseline snapshot. The
+> streaming-EoT PoC (repo `poc-streaming-eot`) depends on the **`poc-streaming-eot`
+> branch**, which extends this baseline with `eval/` (KEV two-stage tool selection,
+> EOT scoring, streaming ASR, prefix replay evaluation) and a wider
+> `model_clients.py`. `main`'s `model_clients.py` has no `MULTIDOMAIN_CONTROLS`, so
+> importing it from the PoC fails — check out `poc-streaming-eot` first:
+>
+> ```sh
+> git clone https://github.com/songyuyao110-tech/navi-dual-system.git
+> cd navi-dual-system && git checkout poc-streaming-eot
+> ```
+>
+> Install: Python 3.10+ (`python3.13` verified) and
+> `python -m pip install -r requirements.txt`. Credentials are read from process
+> environment only (`TYPESAFE_API_KEY`; `LITELLM_BASE_URL` / `LITELLM_API_KEY` /
+> `SLOW_MODEL`) — no secrets are stored in this repository.
+
 ## Status
 
 The source now uses **B-only slow execution**. No A task/target/route decision,
