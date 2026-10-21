@@ -1,0 +1,173 @@
+tools:
+  - name: navi_to_special_poi
+    domain: navigation
+    description: 导航到用户已设置的家庭或公司地址
+    binding: mock
+    side_effect: non_idempotent
+    parameters:
+      type: object
+      properties: {poi_type: {type: string, enum: [home, company]}}
+      required: [poi_type]
+      additionalProperties: false
+  - name: navi_open_address_page
+    domain: navigation
+    description: 打开家庭或公司地址设置页面
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties: {type: {type: string, enum: [home, company]}}
+      required: [type]
+      additionalProperties: false
+  - name: navi_search_in_address_page
+    domain: navigation
+    description: 在地址设置页面搜索地点
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties: {keyword: {type: string, minLength: 1}}
+      required: [keyword]
+      additionalProperties: false
+  - name: navi_search_along_poi
+    domain: navigation
+    description: 沿当前导航路线搜索指定类型或名称的地点
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties:
+        poi_name: {type: string, minLength: 1}
+        search_type: {type: integer}
+        query: {type: string}
+      required: [poi_name]
+      additionalProperties: false
+  - name: navi_search_nearby_poi
+    domain: navigation
+    description: 搜索当前位置或指定坐标附近的地点
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties:
+        poi_name: {type: string, minLength: 1}
+        query: {type: string}
+        center_address: {type: string}
+        longitude: {type: number}
+        latitude: {type: number}
+      required: [poi_name]
+      additionalProperties: false
+  - name: navi_search_keyword
+    domain: navigation
+    description: 按关键词搜索目的地或地点，可在地图展示
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties:
+        keyword: {type: string, minLength: 1}
+        query: {type: string}
+        show_in_map: {type: boolean}
+      required: [keyword]
+      additionalProperties: false
+  - name: navi_start_route
+    domain: navigation
+    description: 启动导航到明确的目的地，可以指定途经点和路线偏好
+    binding: mock
+    side_effect: non_idempotent
+    parameters:
+      type: object
+      properties:
+        end_name: {type: string, minLength: 1}
+        end_address: {type: string}
+        end_lat: {type: number}
+        end_lng: {type: number}
+        via_points:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              address: {type: string}
+              lat: {type: number}
+              lng: {type: number}
+            additionalProperties: false
+        query: {type: string}
+        route_option: {type: string, enum: [default, fastest, shortest, avoid_toll, avoid_highway]}
+        simulate: {type: boolean}
+      required: [end_name]
+      additionalProperties: false
+  - name: navi_get_status
+    domain: navigation
+    description: 获取当前是否导航中及当前导航状态
+    binding: mock
+    side_effect: idempotent
+    parameters: {type: object, properties: {}, additionalProperties: false}
+  - name: navi_get_route_info
+    domain: navigation
+    description: 获取当前路线详情
+    binding: mock
+    side_effect: idempotent
+    parameters: {type: object, properties: {}, additionalProperties: false}
+  - name: navi_add_waypoint
+    domain: navigation
+    description: 给已有导航路线添加明确坐标的途经点
+    binding: mock
+    side_effect: non_idempotent
+    parameters:
+      type: object
+      properties:
+        name: {type: string, minLength: 1}
+        address: {type: string}
+        lat: {type: number}
+        lng: {type: number}
+        position: {type: string, enum: [next, last]}
+      required: [name, lat, lng]
+      additionalProperties: false
+  - name: navi_switch_route
+    domain: navigation
+    description: 切换已规划路线或变更路线偏好
+    binding: mock
+    side_effect: conditional
+    parameters:
+      type: object
+      properties:
+        route_index: {type: integer}
+        preference: {type: string, enum: [fastest, shortest, avoid_toll, avoid_highway, less_traffic]}
+      additionalProperties: false
+  - name: navi_get_remaining
+    domain: navigation
+    description: 获取导航剩余距离和时间
+    binding: mock
+    side_effect: idempotent
+    parameters: {type: object, properties: {}, additionalProperties: false}
+  - name: navi_cancel_route
+    domain: navigation
+    description: 取消正在进行的导航路线
+    binding: mock
+    side_effect: non_idempotent
+    parameters: {type: object, properties: {}, additionalProperties: false}
+  - name: navi_show_poi_list
+    domain: navigation
+    description: 在车端展示已有地点搜索结果
+    binding: mock
+    side_effect: idempotent
+    parameters:
+      type: object
+      properties:
+        keyword: {type: string}
+        poi_list:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              address: {type: string}
+              lat: {type: number}
+              lng: {type: number}
+              distance: {type: string}
+              rating: {type: string}
+            required: [name, lat, lng]
+            additionalProperties: false
+      required: [poi_list]
+      additionalProperties: false

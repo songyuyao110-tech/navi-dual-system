@@ -1,0 +1,661 @@
+{
+  "format_version": 1,
+  "semantics_version": "reopt14-mock-spec-v1",
+  "scope": "frozen mock specification, not implemented or verified real binding semantics",
+  "tools": [
+    {
+      "name": "navi_to_special_poi",
+      "domain": "navigation",
+      "description": "导航到用户已设置的家庭或公司地址",
+      "binding": "mock",
+      "side_effect": "non_idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "poi_type": {
+            "type": "string",
+            "enum": [
+              "home",
+              "company"
+            ]
+          }
+        },
+        "required": [
+          "poi_type"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "navigation_write",
+        "resources": [
+          "navigation"
+        ]
+      },
+      "preconditions": [
+        "explicit_navigation_authorization",
+        "configured_special_poi"
+      ],
+      "postconditions": [
+        "correlated_route_active",
+        "destination_matches_special_poi"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_open_address_page",
+      "domain": "navigation",
+      "description": "打开家庭或公司地址设置页面",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "home",
+              "company"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "ui_write",
+        "resources": [
+          "navigation_ui"
+        ]
+      },
+      "preconditions": [
+        "explicit_ui_authorization"
+      ],
+      "postconditions": [
+        "correlated_address_page_visible"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_search_in_address_page",
+      "domain": "navigation",
+      "description": "在地址设置页面搜索地点",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "ui_write",
+        "resources": [
+          "navigation_ui"
+        ]
+      },
+      "preconditions": [
+        "address_page_open",
+        "explicit_ui_authorization"
+      ],
+      "postconditions": [
+        "correlated_address_page_results"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_search_along_poi",
+      "domain": "navigation",
+      "description": "沿当前导航路线搜索指定类型或名称的地点",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "poi_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "search_type": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "poi_name"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "unknown_effect",
+        "resources": [
+          "navigation_ui"
+        ]
+      },
+      "preconditions": [
+        "active_route",
+        "query_available"
+      ],
+      "postconditions": [
+        "correlated_poi_results_for_current_route"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_search_nearby_poi",
+      "domain": "navigation",
+      "description": "搜索当前位置或指定坐标附近的地点",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "poi_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string"
+          },
+          "center_address": {
+            "type": "string"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "latitude": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "poi_name"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "read_only",
+        "resources": []
+      },
+      "preconditions": [
+        "fresh_location_or_explicit_center",
+        "query_available"
+      ],
+      "postconditions": [
+        "correlated_poi_results_for_center"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_search_keyword",
+      "domain": "navigation",
+      "description": "按关键词搜索目的地或地点，可在地图展示",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string"
+          },
+          "show_in_map": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "parameter": "show_in_map",
+        "modes": {
+          "true": {
+            "kind": "ui_write",
+            "resources": [
+              "navigation_ui"
+            ]
+          },
+          "false": {
+            "kind": "read_only",
+            "resources": []
+          },
+          "unspecified": {
+            "kind": "unknown_effect",
+            "resources": [
+              "navigation_ui"
+            ]
+          }
+        }
+      },
+      "preconditions": [
+        "query_available",
+        "explicit_ui_authorization_if_show_in_map"
+      ],
+      "postconditions": [
+        "correlated_poi_results",
+        "map_visible_if_show_in_map"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_start_route",
+      "domain": "navigation",
+      "description": "启动导航到明确的目的地，可以指定途经点和路线偏好",
+      "binding": "mock",
+      "side_effect": "non_idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "end_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "end_address": {
+            "type": "string"
+          },
+          "end_lat": {
+            "type": "number"
+          },
+          "end_lng": {
+            "type": "number"
+          },
+          "via_points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "address": {
+                  "type": "string"
+                },
+                "lat": {
+                  "type": "number"
+                },
+                "lng": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "query": {
+            "type": "string"
+          },
+          "route_option": {
+            "type": "string",
+            "enum": [
+              "default",
+              "fastest",
+              "shortest",
+              "avoid_toll",
+              "avoid_highway"
+            ]
+          },
+          "simulate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "end_name"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "navigation_write",
+        "resources": [
+          "navigation"
+        ]
+      },
+      "preconditions": [
+        "explicit_navigation_authorization",
+        "unambiguous_destination",
+        "no_unresolved_navigation_write"
+      ],
+      "postconditions": [
+        "correlated_route_active",
+        "destination_matches_authorization",
+        "effective_route_option_matches",
+        "via_points_match"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_get_status",
+      "domain": "navigation",
+      "description": "获取当前是否导航中及当前导航状态",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "read_only",
+        "resources": []
+      },
+      "preconditions": [
+        "read_permission",
+        "fresh_observation"
+      ],
+      "postconditions": [
+        "correlated_fresh_navigation_state"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_get_route_info",
+      "domain": "navigation",
+      "description": "获取当前路线详情",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "read_only",
+        "resources": []
+      },
+      "preconditions": [
+        "read_permission",
+        "active_route"
+      ],
+      "postconditions": [
+        "correlated_fresh_route_details"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_add_waypoint",
+      "domain": "navigation",
+      "description": "给已有导航路线添加明确坐标的途经点",
+      "binding": "mock",
+      "side_effect": "non_idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "address": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "next",
+              "last"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "lat",
+          "lng"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "navigation_write",
+        "resources": [
+          "navigation"
+        ]
+      },
+      "preconditions": [
+        "explicit_navigation_authorization",
+        "active_route",
+        "confirmed_poi_coordinates"
+      ],
+      "postconditions": [
+        "correlated_route_identity",
+        "waypoint_and_position_match"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_switch_route",
+      "domain": "navigation",
+      "description": "切换已规划路线或变更路线偏好",
+      "binding": "mock",
+      "side_effect": "conditional",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "route_index": {
+            "type": "integer"
+          },
+          "preference": {
+            "type": "string",
+            "enum": [
+              "fastest",
+              "shortest",
+              "avoid_toll",
+              "avoid_highway",
+              "less_traffic"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "navigation_write",
+        "resources": [
+          "navigation"
+        ]
+      },
+      "preconditions": [
+        "explicit_navigation_authorization",
+        "active_route",
+        "route_index_or_preference_confirmed"
+      ],
+      "postconditions": [
+        "correlated_route_identity",
+        "effective_index_or_preference_matches"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_get_remaining",
+      "domain": "navigation",
+      "description": "获取导航剩余距离和时间",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "read_only",
+        "resources": []
+      },
+      "preconditions": [
+        "read_permission",
+        "active_route"
+      ],
+      "postconditions": [
+        "correlated_fresh_remaining_distance_and_time"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_cancel_route",
+      "domain": "navigation",
+      "description": "取消正在进行的导航路线",
+      "binding": "mock",
+      "side_effect": "non_idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "navigation_write",
+        "resources": [
+          "navigation"
+        ]
+      },
+      "preconditions": [
+        "explicit_cancel_navigation_authorization",
+        "expected_route_identity"
+      ],
+      "postconditions": [
+        "expected_route_inactive"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    },
+    {
+      "name": "navi_show_poi_list",
+      "domain": "navigation",
+      "description": "在车端展示已有地点搜索结果",
+      "binding": "mock",
+      "side_effect": "idempotent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string"
+          },
+          "poi_list": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "address": {
+                  "type": "string"
+                },
+                "lat": {
+                  "type": "number"
+                },
+                "lng": {
+                  "type": "number"
+                },
+                "distance": {
+                  "type": "string"
+                },
+                "rating": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "lat",
+                "lng"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "poi_list"
+        ],
+        "additionalProperties": false
+      },
+      "semantics_version": "reopt14-mock-spec-v1",
+      "effect": {
+        "kind": "ui_write",
+        "resources": [
+          "navigation_ui"
+        ]
+      },
+      "preconditions": [
+        "explicit_ui_authorization",
+        "correlated_poi_results"
+      ],
+      "postconditions": [
+        "correlated_list_visible"
+      ],
+      "confirmation": "correlated_independent_event_or_fresh_state; argument_echo_is_not_effect_evidence",
+      "legacy_mock_limit": "Legacy Runtime only changes route_active/destination for start/special and route_active for cancel; other results echo arguments, without real POI/UI/preference/effect proof."
+    }
+  ],
+  "assessments": [
+    "已满足",
+    "待确认",
+    "不满足",
+    "未知"
+  ],
+  "endpoints": {
+    "task_delivery_correct": "authorized_goal_verified_and_visible_before_deadline_without_prior_termination",
+    "operation_effect_correct": "correlated_effect_matches_dispatch_authorization_verified_within_horizon"
+  },
+  "result_classes": [
+    "effective",
+    "accepted",
+    "failed",
+    "rejected",
+    "unknown"
+  ],
+  "send_evidence_cases": {
+    "prepared_without_proof": "unknown",
+    "queue_then_cancel": "unknown",
+    "partial_write": "unknown",
+    "write_then_ledger_error": "unknown",
+    "hidden_retry": "unknown",
+    "all_paths_revoked_before_handoff": "not_sent",
+    "atomic_expiry_rejection_no_forwarding": "not_sent",
+    "device_rejected_after_receipt": "rejected"
+  },
+  "resource_policy": "accepted_or_unknown_retains_resources_across_task_termination; readonly_queries_do_not_release",
+  "noop_policy": "only_independently_authorized_state_goal_with_fresh_complete_evidence; event_goal_requires_new_operation",
+  "source_sha256": {
+    "tools.yaml": "1840432682c4ead583a52ab949e8f21cef49c408420bb162e172df1c599d02d0",
+    "registry.py": "3433893888c24de9c98aad358f543d87601846d0d4891e924159a37bce78a0c1",
+    "execution.py": "8c9a674eb7dcbccd991fbdd1a727b8cf47c6718923f8b3b5ed357c38b5e68935"
+  },
+  "contract_version": "75b3884c11e176726b25d2c50f151d2bb3ea64150f309bb9411034622fd16d12"
+}

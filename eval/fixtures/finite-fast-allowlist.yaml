@@ -1,0 +1,751 @@
+# Finite fast path allowlist — the ONLY source of truth for which tools may skip the LLM.
+#
+# A tool is eligible only if every one of its parameters is a string enum or a boolean (no open
+# slot: no free text, no number, no array, no object). Extending this list is a product decision:
+# edit this file and add cases to finite-fast-cases.jsonl. Never hardcode tool names in code.
+#
+# Per parameter:
+#   question: what KEV is asked to decide (sent as the Choice instructions)
+#   labels:   short criteria text per legal value; the keys ARE the schema-legal values, so a
+#             KEV answer that is not a legal value is rejected. Booleans use "true"/"false".
+#
+# Negation is NOT handled here: no cue list, no rule. KEV fills the polarity; whether it is right
+# on a negated phrasing is measured by the case corpus (negated utterances are HIT cases with an
+# expected argument), not enforced by string matching in the gate.
+# Spec: tmp/poc-finite-fast-spec.md §5 · tmp/poc-finite-fast-followup-spec.md Part A.
+#
+# 2026-10-20 (reopt 1a): 10 -> 30 tools. The 20 additions are the eligible pure enum/boolean tools
+# (multidomain: 58 of 200, 29 more have no parameters and cannot be filled, so they stay out) ranked
+# by measured shortlist top-1 frequency over the local corpora, then by how common the instruction is.
+# light_set_ambient_color (top-1 x3) is deliberately NOT added: it is the negative control of
+# `miss-not-allowlisted-color` ("把氛围灯调成蓝色"), which has to keep missing to stay a regression.
+# Gate logic is unchanged: this file is still the only list source.
+version: 1
+
+defaults:
+  tool_tau: 0.70          # scores["tool:<name>"] floor for the shortlist top-1
+  param_tau: 0.70         # every parameter Choice confidence floor
+  require_top1: true      # the candidate must be shortlist rank 1
+
+tools:
+  - name: navi_to_special_poi
+    description: 导航到用户已设置的家庭或公司地址
+    params:
+      - name: poi_type
+        kind: enum
+        question: 用户要去的既定地址是家庭还是公司
+        values: [home, company]
+        labels:
+          home: 导航回家（家庭地址）
+          company: 导航去公司（公司地址）
+
+  - name: navi_open_address_page
+    description: 打开家庭或公司地址设置页面
+    params:
+      - name: type
+        kind: enum
+        question: 用户要打开哪一个地址设置页面
+        values: [home, company]
+        labels:
+          home: 打开家庭地址设置页
+          company: 打开公司地址设置页
+
+  - name: climate_set_power
+    description: 开启或关闭座舱空调系统，不控制座椅通风
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭空调
+        labels:
+          "true": 开启空调
+          "false": 关闭空调
+
+  - name: climate_set_ac
+    description: 开启或关闭空调制冷压缩机，区别于空调整机开关
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭AC制冷
+        labels:
+          "true": 开启制冷压缩机
+          "false": 关闭制冷压缩机
+
+  - name: climate_set_auto
+    description: 开启或关闭空调自动温控模式，不切换驾驶模式
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭空调自动温控模式
+        labels:
+          "true": 开启空调自动模式
+          "false": 关闭空调自动模式
+
+  - name: music_skip
+    description: 切换音乐到上一首或下一首，不切换电台
+    params:
+      - name: direction
+        kind: enum
+        question: 用户要切到下一首还是上一首
+        values: [next, previous]
+        labels:
+          next: 切到下一首
+          previous: 切到上一首
+
+  - name: music_set_mode
+    description: 设置音乐播放模式（顺序、随机、单曲循环、列表循环）
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要哪种播放模式
+        values: [sequence, shuffle, repeat_one, repeat_all]
+        labels:
+          sequence: 顺序播放
+          shuffle: 随机播放
+          repeat_one: 单曲循环
+          repeat_all: 列表循环
+
+  - name: phone_set_mic_mute
+    description: 把通话麦克风静音或取消静音
+    params:
+      - name: muted
+        kind: boolean
+        question: 用户要把麦克风静音还是取消静音
+        labels:
+          "true": 麦克风静音
+          "false": 取消麦克风静音
+
+  - name: light_set_ambient_power
+    description: 开启或关闭车内氛围灯，不开启显示屏
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭氛围灯
+        labels:
+          "true": 开启氛围灯
+          "false": 关闭氛围灯
+
+  - name: body_set_tailgate
+    description: 打开或关闭尾门，仅停车安全条件下模拟动作
+    params:
+      - name: open
+        kind: boolean
+        question: 用户要打开还是关闭尾门
+        labels:
+          "true": 打开尾门
+          "false": 关闭尾门
+  # ---- reopt 1a additions (2026-10-20): rank below is the measured top-1 frequency ----
+
+  - name: light_set_reading          # top-1 x7 — highest-frequency eligible tool
+    description: 打开或关闭指定座位的车内阅读灯，不调节屏幕背光或氛围灯
+    params:
+      - name: position
+        kind: enum
+        question: 用户要操作哪一个位置的阅读灯
+        values: [driver, passenger, rear_left, rear_right, all]
+        labels:
+          driver: 主驾位置的阅读灯
+          passenger: 副驾位置的阅读灯
+          rear_left: 左后座位置的阅读灯
+          rear_right: 右后座位置的阅读灯
+          all: 全车所有阅读灯
+      - name: enabled
+        kind: boolean
+        question: 用户要打开还是关闭该位置的阅读灯
+        labels:
+          "true": 打开阅读灯
+          "false": 关闭阅读灯
+
+  - name: climate_set_front_defrost
+    description: 开启或关闭前风挡空调除雾，不控制雨刷
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭前风挡除雾
+        labels:
+          "true": 开启前风挡除雾
+          "false": 关闭前风挡除雾
+
+  - name: climate_set_sync
+    description: 开启或关闭空调多温区同步，不同步手机数据
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭空调温区同步
+        labels:
+          "true": 开启温区同步
+          "false": 关闭温区同步
+
+  - name: seat_stop_massage
+    description: 停止指定座椅的按摩，不启动按摩、不调节音乐
+    params:
+      - name: seat
+        kind: enum
+        question: 用户要停止哪一个座椅的按摩
+        values: [driver, passenger]
+        labels:
+          driver: 主驾座椅
+          passenger: 副驾座椅
+
+  - name: navi_set_map_view
+    description: 切换导航地图为二维、三维或卫星视图
+    params:
+      - name: view
+        kind: enum
+        question: 用户要把地图切到哪一种视图
+        values: [two_d, three_d, satellite]
+        labels:
+          two_d: 二维平面视图
+          three_d: 三维立体视图
+          satellite: 卫星影像视图
+
+  - name: navi_set_voice_guidance
+    description: 设置导航播报为完整、简洁或静音，不调整全车音量
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要把导航播报设成哪一种模式
+        values: [full, brief, muted]
+        labels:
+          full: 完整播报（每条提示都播）
+          brief: 简洁播报（只播关键提示）
+          muted: 播报静音（不再播报）
+
+  - name: vehicle_get_trip
+    description: 查询指定行程表的里程、时长和平均能耗，不规划导航
+    params:
+      - name: trip
+        kind: enum
+        question: 用户要查询哪一个行程表
+        values: [current, a, b]
+        labels:
+          current: 当前行程（本次行程）
+          a: 行程表 A
+          b: 行程表 B
+
+  - name: energy_set_port
+    description: 打开或关闭车辆充电口盖，不开后备箱或普通车门
+    params:
+      - name: open
+        kind: boolean
+        question: 用户要打开还是关闭充电口盖
+        labels:
+          "true": 打开充电口盖
+          "false": 关闭充电口盖
+
+  - name: vehicle_get_energy_usage
+    description: 查询指定统计周期车辆能耗，不查询充电价格
+    params:
+      - name: period
+        kind: enum
+        question: 用户要查询哪个统计周期的能耗
+        values: [today, week, month]
+        labels:
+          today: 今天的能耗
+          week: 本周的能耗
+          month: 本月的能耗
+
+  - name: video_resume
+    description: 在允许的屏幕继续播放已暂停的视频，不恢复音乐
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要继续播放哪一块屏幕上的视频
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏
+          rear_left: 左后座屏幕
+          rear_right: 右后座屏幕
+
+  - name: video_set_subtitles
+    description: 设置视频字幕语言或关闭字幕，不显示歌曲歌词
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要改哪一块屏幕上的视频字幕
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏
+          rear_left: 左后座屏幕
+          rear_right: 右后座屏幕
+      - name: language
+        kind: enum
+        question: 用户要把字幕设成哪一种语言或关闭
+        values: ["off", zh_CN, en_US]
+        labels:
+          "off": 关闭字幕
+          zh_CN: 中文字幕
+          en_US: 英文字幕
+
+  - name: message_set_notifications
+    description: 设置短信或 IM 通知开关，不调整通知音量或全局免打扰
+    params:
+      - name: channel
+        kind: enum
+        question: 用户要改哪一个消息渠道的通知
+        values: [sms, im]
+        labels:
+          sms: 短信通知
+          im: IM 即时消息通知
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭该渠道的通知
+        labels:
+          "true": 开启通知
+          "false": 关闭通知
+
+  - name: drive_set_mode
+    description: 设置经济、舒适或运动驾驶模式，不设置音乐或空调模式
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要切换到哪一种驾驶模式
+        values: [eco, comfort, sport]
+        labels:
+          eco: 经济模式
+          comfort: 舒适模式
+          sport: 运动模式
+
+  - name: drive_set_steering_weight
+    description: 设置转向助力为轻柔、标准或偏重，不移动方向盘控制车辆
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要把转向手感调成哪一档
+        values: [light, standard, heavy]
+        labels:
+          light: 轻柔（打方向更轻）
+          standard: 标准
+          heavy: 偏重（打方向更沉）
+
+  - name: system_set_do_not_disturb
+    description: 开启或关闭全局免打扰，不单独关闭某个消息渠道或关闭安全警报
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭全局免打扰
+        labels:
+          "true": 开启免打扰
+          "false": 关闭免打扰
+
+  - name: light_set_welcome
+    description: 设置车辆迎宾灯效果开关，不开车门或支付停车费
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭迎宾灯
+        labels:
+          "true": 开启迎宾灯
+          "false": 关闭迎宾灯
+
+  - name: light_set_high_beam_assist
+    description: 开启或关闭自动远光灯辅助，不设置自适应巡航
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭自动远光灯辅助
+        labels:
+          "true": 开启远光辅助
+          "false": 关闭远光辅助
+
+  - name: body_set_child_lock
+    description: 设置后排车门儿童锁，不是普通全车门锁
+    params:
+      - name: side
+        kind: enum
+        question: 用户要设置哪一侧的后排儿童锁
+        values: [left, right, both]
+        labels:
+          left: 左后门儿童锁
+          right: 右后门儿童锁
+          both: 两侧后门儿童锁
+      - name: enabled
+        kind: boolean
+        question: 用户要打开还是关闭该侧儿童锁
+        labels:
+          "true": 打开儿童锁
+          "false": 关闭儿童锁
+
+  - name: system_set_mute               # top-1 x1, but mute is one of the most common car commands
+    description: 设置媒体扬声器静音，不关闭通话麦克风或导航播报模式
+    params:
+      - name: muted
+        kind: boolean
+        question: 用户要把媒体扬声器静音还是取消静音
+        labels:
+          "true": 媒体静音
+          "false": 取消媒体静音
+
+  - name: body_set_wipers              # top-1 x1, common in driving; 4 legal gears only
+    description: 设置雨刷关闭、自动或速度档位，不启动风挡除雾
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要把雨刷调到哪一档
+        values: ["off", auto, low, high]
+        labels:
+          "off": 关闭雨刷
+          auto: 自动感应档
+          low: 低速连续档
+          high: 高速连续档
+  # ---- speculative-toolselect additions (2026-10-20): the remaining eligible tools, 30 -> 58 ----
+  # Same 1a rule, no exception: every parameter is a string enum or a boolean, parameters nonempty.
+  # Order follows the domain order of tools-multidomain.yaml so the file stays readable; membership
+  # is still this file only (no tool name appears in eval/finite_fast_path.py).
+
+  - name: climate_set_airflow
+    description: 设置空调出风方向为面部、脚部或两者
+    params:
+      - name: direction
+        kind: enum
+        question: 用户要把空调风吹向哪里
+        values: [face, feet, face_feet]
+        labels:
+          face: 吹面部
+          feet: 吹脚部
+          face_feet: 同时吹面部和脚部
+
+  - name: climate_set_recirculation
+    description: 设置空调内循环或外循环，不开关车窗
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要把空调切到内循环、外循环还是自动
+        values: [inside, outside, auto]
+        labels:
+          inside: 内循环
+          outside: 外循环
+          auto: 自动循环
+
+  - name: climate_set_rear_defrost
+    description: 开启或关闭后风挡加热除雾，不设置座椅加热
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭后风挡加热除雾
+        labels:
+          "true": 开启后风挡除雾
+          "false": 关闭后风挡除雾
+
+  - name: climate_set_purification
+    description: 开启或关闭座舱空气净化，不查询室外空气质量
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭座舱空气净化
+        labels:
+          "true": 开启空气净化
+          "false": 关闭空气净化
+
+  - name: body_set_door_lock
+    description: 锁定或解锁指定车门，不控制屏幕锁或充电口
+    params:
+      - name: door
+        kind: enum
+        question: 用户要锁定或解锁哪一个车门
+        values: [driver, passenger, rear_left, rear_right, all]
+        labels:
+          driver: 主驾车门
+          passenger: 副驾车门
+          rear_left: 左后车门
+          rear_right: 右后车门
+          all: 全车所有车门
+      - name: locked
+        kind: boolean
+        question: 用户要锁车还是解锁
+        labels:
+          "true": 上锁
+          "false": 解锁
+
+  - name: body_set_mirror_fold
+    description: 折叠或展开外后视镜，不设置镜面加热
+    params:
+      - name: folded
+        kind: boolean
+        question: 用户要折叠还是展开外后视镜
+        labels:
+          "true": 折叠后视镜
+          "false": 展开后视镜
+
+  - name: body_set_mirror_heat
+    description: 开启或关闭外后视镜加热除雾，不加热后风挡
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭外后视镜加热
+        labels:
+          "true": 开启后视镜加热
+          "false": 关闭后视镜加热
+
+  - name: seat_get_status
+    description: 查询指定座椅位置、加热、通风和按摩状态
+    params:
+      - name: seat
+        kind: enum
+        question: 用户要查询哪一个座椅的状态
+        values: [driver, passenger, rear_left, rear_right]
+        labels:
+          driver: 主驾座椅
+          passenger: 副驾座椅
+          rear_left: 左后座椅
+          rear_right: 右后座椅
+
+  - name: light_set_headlights
+    description: 设置外部前大灯关闭、自动或近光，不控制座舱阅读灯
+    params:
+      - name: mode
+        kind: enum
+        question: 用户要把前大灯设为关闭、自动还是近光
+        values: ["off", auto, low_beam]
+        labels:
+          "off": 关闭前大灯
+          auto: 前大灯自动
+          low_beam: 前大灯近光
+
+  - name: light_set_fog
+    description: 开启或关闭后雾灯，不启动前风挡除雾
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭后雾灯
+        labels:
+          "true": 开启后雾灯
+          "false": 关闭后雾灯
+
+  - name: light_set_ambient_color
+    description: 设置车内氛围灯颜色，不切换系统屏幕主题
+    params:
+      - name: color
+        kind: enum
+        question: 用户要把氛围灯调成哪一种颜色
+        values: [red, blue, green, purple, amber, white]
+        labels:
+          red: 红色
+          blue: 蓝色
+          green: 绿色
+          purple: 紫色
+          amber: 琥珀色
+          white: 白色
+
+  - name: light_set_ambient_effect
+    description: 设置氛围灯静态、呼吸或随音乐律动效果，不改变歌曲
+    params:
+      - name: effect
+        kind: enum
+        question: 用户要哪一种氛围灯效果
+        values: [static, breathing, music_sync]
+        labels:
+          static: 静态常亮
+          breathing: 呼吸渐变
+          music_sync: 随音乐律动
+
+  - name: audio_set_playback
+    description: 只暂停或继续原话明确要暂停/继续的广播、播客或有声书；不播放新单集，不控制音乐或视频
+    params:
+      - name: source
+        kind: enum
+        question: 暂停或继续的动作指向哪一个音源（音乐不在此枚举）
+        values: [radio, podcast, audiobook]
+        labels:
+          radio: 广播电台
+          podcast: 播客
+          audiobook: 有声书
+      - name: action
+        kind: enum
+        question: 用户要暂停还是继续该音源的播放
+        values: [pause, resume]
+        labels:
+          pause: 暂停播放
+          resume: 继续播放
+
+  - name: video_pause
+    description: 暂停指定屏幕的视频，不暂停音乐
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要暂停哪一块屏幕的视频
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏幕
+          rear_left: 左后屏幕
+          rear_right: 右后屏幕
+
+  - name: video_set_quality
+    description: 设置视频清晰度，不调整屏幕亮度或分辨率设置
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要设置哪一块屏幕的视频清晰度
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏幕
+          rear_left: 左后屏幕
+          rear_right: 右后屏幕
+      - name: quality
+        kind: enum
+        question: 用户要哪一种视频清晰度
+        values: [auto, sd, hd]
+        labels:
+          auto: 自动清晰度
+          sd: 标清
+          hd: 高清
+
+  - name: video_get_status
+    description: 查询指定屏幕当前视频和播放进度，不查系统屏幕开关
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要查询哪一块屏幕的视频状态
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏幕
+          rear_left: 左后屏幕
+          rear_right: 右后屏幕
+
+  - name: message_list_unread
+    description: 列出短信或IM未读消息摘要，不朗读正文或发送消息
+    params:
+      - name: channel
+        kind: enum
+        question: 用户要看哪一个渠道的未读消息
+        values: [sms, im, all]
+        labels:
+          sms: 短信
+          im: 即时通讯消息
+          all: 全部渠道
+
+  - name: info_get_news
+    description: 获取指定类别新闻摘要，不播放新闻广播或播客
+    params:
+      - name: category
+        kind: enum
+        question: 用户要哪一类新闻
+        values: [general, technology, finance, sports]
+        labels:
+          general: 综合新闻
+          technology: 科技新闻
+          finance: 财经新闻
+          sports: 体育新闻
+
+  - name: drive_set_regeneration
+    description: 设置车辆能量回收强度，不启动充电
+    params:
+      - name: level
+        kind: enum
+        question: 用户要把能量回收设为哪一档
+        values: [low, medium, high, auto]
+        labels:
+          low: 低回收
+          medium: 中等回收
+          high: 高回收
+          auto: 自动回收
+
+  - name: drive_set_lane_assist
+    description: 开启或关闭车道保持辅助配置，不启动自动驾驶或自动转向动作
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭车道保持辅助
+        labels:
+          "true": 开启车道保持辅助
+          "false": 关闭车道保持辅助
+
+  - name: drive_set_auto_hold
+    description: 开启或关闭自动驻车配置，不自动泊车或支付停车费
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭自动驻车
+        labels:
+          "true": 开启自动驻车
+          "false": 关闭自动驻车
+
+  - name: reminder_list
+    description: 查询未完成或全部提醒，不查询会议日程
+    params:
+      - name: status
+        kind: enum
+        question: 用户要查未完成的提醒还是全部提醒
+        values: [pending, all]
+        labels:
+          pending: 未完成的提醒
+          all: 全部提醒
+
+  - name: system_set_screen_power
+    description: 开启或关闭允许控制的娱乐显示屏，不暂停视频或关闭仪表
+    params:
+      - name: screen
+        kind: enum
+        question: 用户要开关哪一块娱乐显示屏
+        values: [center, rear_left, rear_right]
+        labels:
+          center: 中控屏幕
+          rear_left: 左后屏幕
+          rear_right: 右后屏幕
+      - name: enabled
+        kind: boolean
+        question: 用户要打开还是关闭该屏幕
+        labels:
+          "true": 打开屏幕
+          "false": 关闭屏幕
+
+  - name: system_set_theme
+    description: 设置屏幕明亮、深色或自动主题，不改氛围灯颜色
+    params:
+      - name: theme
+        kind: enum
+        question: 用户要把屏幕主题设为哪一种
+        values: [light, dark, auto]
+        labels:
+          light: 明亮主题
+          dark: 深色主题
+          auto: 自动主题
+
+  - name: system_set_language
+    description: 设置车机界面语言，不翻译某一句话
+    params:
+      - name: language
+        kind: enum
+        question: 用户要把车机界面语言设为哪一种
+        values: [zh_CN, en_US, de_DE]
+        labels:
+          zh_CN: 中文
+          en_US: 英文
+          de_DE: 德文
+
+  - name: system_set_units
+    description: 设置车机距离和温度显示单位，不做一次性数值换算
+    params:
+      - name: distance
+        kind: enum
+        question: 用户要把距离单位设为公里还是英里
+        values: [km, mi]
+        labels:
+          km: 公里
+          mi: 英里
+      - name: temperature
+        kind: enum
+        question: 用户要把温度单位设为摄氏度还是华氏度
+        values: [celsius, fahrenheit]
+        labels:
+          celsius: 摄氏度
+          fahrenheit: 华氏度
+
+  - name: system_set_bluetooth
+    description: 开启或关闭车机蓝牙，不同步联系人或拨打电话
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭车机蓝牙
+        labels:
+          "true": 开启蓝牙
+          "false": 关闭蓝牙
+
+  - name: system_set_wifi
+    description: 开启或关闭车机Wi-Fi，不处理网络密码或购买流量
+    params:
+      - name: enabled
+        kind: boolean
+        question: 用户要开启还是关闭车机Wi-Fi
+        labels:
+          "true": 开启Wi-Fi
+          "false": 关闭Wi-Fi

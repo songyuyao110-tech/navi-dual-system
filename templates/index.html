@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单 Agent · B 披露＋慢链 ReAct PoC</title>
+<style>
+  body { margin: 32px auto; max-width: 1100px; padding: 0 20px; font: 16px system-ui; background: #f5f7fa; color: #162134; }
+  section { background: white; border-radius: 12px; margin: 18px 0; padding: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+  code, pre { font-family: monospace; white-space: pre-wrap; word-break: break-word; }
+  #error { color: #a71919; }
+  textarea { width: 100%; box-sizing: border-box; padding: 12px; font: inherit; }
+  button { margin-top: 10px; padding: 10px 18px; background: #18467a; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+</style>
+<h1>单 Agent · B 披露＋慢链 ReAct PoC</h1>
+<p>当前导航执行为 mock，不会向车辆发出真实指令。</p>
+<p id="deployment" role="status"></p>
+<p id="error" role="alert"></p>
+<section><h2>工具披露与慢链执行</h2><form id="input">
+  <label for="utterance">原话</label>
+  <textarea id="utterance" required>导航回家</textarea>
+  <label for="context">测试上下文 / 偏好（JSON）</label>
+  <textarea id="context">{}</textarea>
+  <button id="submit" value="/api/chat">运行任务（mock）</button>
+  <button id="judge" value="/api/decide">仅披露工具 B</button>
+  <p>目标链路：JEV B 工具披露 → 云端慢链 ReAct，不调用 A 或快模型；是否已在后端生效以运行状态为准。一次只处理一个活跃任务；等待追问时，下一句话作为原任务的回答。取消、修订和追问期间切换任务暂不支持。</p>
+</form><pre id="decision"></pre></section>
+<section><h2>运行状态</h2><pre id="health"></pre></section>
+<section><h2>共享工具注册表</h2><button id="reload">重新加载 tools.yaml</button>
+<p>仅后续新任务使用新版本；在途任务、回填及追加披露固定原版本。校验失败不发布。</p>
+<p id="version"></p><table>
+  <thead><tr><th>域 / 工具</th><th>说明</th><th>绑定</th></tr></thead><tbody id="tools"></tbody>
+</table></section>
+<section><h2>共享 runtime 调用记录</h2><pre id="runtime"></pre></section>
+<section><h2>任务台账</h2><pre id="tasks"></pre></section>
+<script>
+  async function getJSON(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+    return response.json();
+  }
+  async function refresh() {
+    try {
+      const [health, registry, runtime, tasks] = await Promise.all([
+        getJSON('/health'), getJSON('/api/registry'), getJSON('/api/runtime'), getJSON('/api/tasks')
+      ]);
+      document.getElementById('health').textContent = JSON.stringify(health, null, 2);
+      document.getElementById('deployment').textContent = health.execution_policy === 'b_only_slow'
+        ? '当前后端已启用：仅 B 披露 → 慢链 ReAct。'
+        : '当前后端未报告 B-only 策略；页面更新不代表后端已切换，重启须另行批准。';
+      document.getElementById('version').textContent = `版本：${registry.version}`;
+      const body = document.getElementById('tools');
+      body.replaceChildren();
+      for (const tool of registry.tools) {
+        const row = document.createElement('tr');
+        for (const value of [`${tool.domain} / ${tool.name}`, tool.description, tool.binding]) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        body.appendChild(row);
+      }
+      document.getElementById('runtime').textContent = JSON.stringify(runtime, null, 2);
+      document.getElementById('tasks').textContent = JSON.stringify(tasks, null, 2);
+      document.getElementById('error').textContent = '';
+    } catch (error) {
+      document.getElementById('error').textContent = error.message;
+    }
+  }
+  document.getElementById('input').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = document.getElementById('submit');
+    const judge = document.getElementById('judge');
+    const endpoint = event.submitter.value;
+    button.disabled = true;
+    judge.disabled = true;
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          utterance: document.getElementById('utterance').value,
+          context: JSON.parse(document.getElementById('context').value)
+        })
+      });
+      const accepted = await response.json();
+      if (!response.ok) throw new Error(accepted.error || `HTTP ${response.status}`);
+      let job;
+      do {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        job = await getJSON(`/api/jobs/${accepted.job_id}`);
+        document.getElementById('decision').textContent = JSON.stringify(job, null, 2);
+      } while (job.status === 'judging');
+      if (job.status === 'error') throw new Error(`判断失败：${job.error.type}`);
+      document.getElementById('error').textContent = '';
+      await refresh();
+    } catch (error) {
+      document.getElementById('error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+      judge.disabled = false;
+    }
+  });
+  document.getElementById('reload').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/registry/reload', {method: 'POST'});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      await refresh();
+    } catch (error) {
+      document.getElementById('error').textContent = `加载失败，旧版本保持有效：${error.message}`;
+    }
+  });
+  refresh();
+</script>
+</html>

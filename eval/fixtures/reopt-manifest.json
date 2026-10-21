@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "base_sha": "ac4eda67c8f2ab8f849d7451433b80d68a3c6ed8",
+  "execution": "offline_mock_only",
+  "contract_file": "eval/fixtures/reopt-contract14.json",
+  "contract_version": "75b3884c11e176726b25d2c50f151d2bb3ea64150f309bb9411034622fd16d12",
+  "contract_file_sha256": "e4e052ac311406c8d3ef07a81886850fa8ff8ed115d9f063f2c062e67111d9bb",
+  "source_sha256": {
+    "tools.yaml": "1840432682c4ead583a52ab949e8f21cef49c408420bb162e172df1c599d02d0",
+    "registry.py": "3433893888c24de9c98aad358f543d87601846d0d4891e924159a37bce78a0c1",
+    "execution.py": "8c9a674eb7dcbccd991fbdd1a727b8cf47c6718923f8b3b5ed357c38b5e68935"
+  },
+  "common32": {
+    "status": "development_exploration",
+    "independent_held_out": false,
+    "frozen": false
+  },
+  "notes": [
+    "Step 1 freezes specification only; old Runtime remains unchanged.",
+    "Live budget/deadlines/approval guard not established until later steps; no live execution allowed.",
+    "Plan header review-round and document-only status describe plan authoring history, not current user approval."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "1": [
+    "eval/fixtures/reopt-contract14.json",
+    "eval/fixtures/reopt-manifest.json",
+    "eval/validate_reopt.py",
+    "eval/verify_delivery.py",
+    "eval/run_step_acceptance.py",
+    "eval/acceptance/step-paths.json",
+    "tests/test_reopt_contract.py",
+    "tests/test_reopt_delivery.py",
+    "tests/test_reopt_scanner_bootstrap.py"
+  ]
+}
